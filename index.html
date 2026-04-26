@@ -27,7 +27,7 @@
       justify-content: center;
       align-items: center;
       font-family: 'DM Sans', sans-serif;
-      background: url("finalbackground.jpeg") no-repeat center center fixed;
+      background: url("https://mahir14-jabajaba.hf.space/static/finalbackground.jpeg") no-repeat center center fixed;
       background-size: cover;
       background-color: #0a0808;
     }
@@ -247,7 +247,7 @@
   </div>
 
   <div class="cover-wrap" id="cover-wrap">
-    <img src="music-cover.png" alt="Album Art" id="cover-img">
+    <img src="https://mahir14-jabajaba.hf.space/static/music-cover.png" alt="Album Art" id="cover-img">
     <div class="cover-overlay">
       <div class="spinner"></div>
       <div class="loading-label" id="loading-label">Fetching track…</div>
@@ -340,14 +340,14 @@
   }
 
   /* ── Play a song by title ── */
-  async function playSong(title) {
+  async function playSong(title, videoId) {
     if (isLoading) return;
     setLoading(true, "Downloading…");
     songTitle.textContent = title;
     setStatus("fetching from YouTube…");
 
     try {
-      const res = await fetch(`${BACKEND}/get-song?title=${encodeURIComponent(title)}`);
+      const res = await fetch(`${BACKEND}/get-song?video_id=${encodeURIComponent(videoId)}&title=${encodeURIComponent(title)}`);
       const data = await res.json();
 
       if (!res.ok) {
@@ -418,7 +418,7 @@
         const div = document.createElement("div");
         div.className = "suggestion-item";
         div.textContent = item.title;
-        div.addEventListener("click", () => selectSong(item.title));
+        div.addEventListener("click", () => selectSong(item.title, item.id));
         suggestionsBox.appendChild(div);
       });
     } catch (err) {
@@ -426,11 +426,11 @@
     }
   }
 
-  function selectSong(title) {
+  function selectSong(title, videoId) {
     searchInput.value = "";
     suggestionsBox.style.display = "none";
     lastQuery = "";
-    playSong(title);
+    playSong(title, videoId);
   }
 
   document.addEventListener("click", e => {
@@ -469,7 +469,7 @@
 
   /* ── Next / Prev ── */
   document.getElementById("next-btn").addEventListener("click", () => {
-    if (queue.length > 0) { const next = queue.shift(); updateQueueDisplay(); playSong(next); }
+    if (queue.length > 0) { const next = queue.shift(); updateQueueDisplay(); playSong(next.title, next.videoId); }
   });
 
   document.getElementById("prev-btn").addEventListener("click", () => {
@@ -477,7 +477,7 @@
   });
 
   audio.addEventListener("ended", () => {
-    if (queue.length > 0) { const next = queue.shift(); updateQueueDisplay(); playSong(next); }
+    if (queue.length > 0) { const next = queue.shift(); updateQueueDisplay(); playSong(next.title, next.videoId); }
   });
 
   /* ── Loop ── */
