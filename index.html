@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leo Music Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #c9a84c;
+      --gold-dim: #8a6d2f;
+      --green: #1db954;
+      --bg: #0a0a0a;
+      --surface: rgba(255,255,255,0.04);
+      --surface-hover: rgba(255,255,255,0.09);
+      --text: #f0ece4;
+      --muted: #7a736a;
+      --radius: 24px;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'DM Sans', sans-serif;
+      background: url("finalbackground.jpeg") no-repeat center center fixed;
+      background-size: cover;
+      background-color: #0a0808;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at 60% 20%, rgba(201,168,76,0.08) 0%, transparent 60%),
+                  linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.85) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .player {
+      position: relative;
+      z-index: 1;
+      width: 420px;
+      padding: 32px 28px 28px;
+      border-radius: var(--radius);
+      background: rgba(8, 6, 4, 0.88);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(201,168,76,0.15);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+      color: var(--text);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      gap: 10px;
+    }
+
+    .logo-leo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 42px;
+      letter-spacing: 8px;
+      color: var(--gold);
+      line-height: 1;
+      text-shadow: 0 0 40px rgba(201,168,76,0.4);
+    }
+
+    .logo-paw { font-size: 22px; opacity: 0.7; }
+
+    .cover-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 18px;
+      overflow: hidden;
+      margin-bottom: 22px;
+      background: #111;
+    }
+
+    .cover-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+      transition: filter 0.4s ease;
+    }
+
+    .cover-wrap.loading img { filter: blur(4px) brightness(0.4); }
+
+    .cover-overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .cover-wrap.loading .cover-overlay { opacity: 1; }
+
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid rgba(201,168,76,0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-label {
+      margin-top: 12px; font-size: 12px;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--gold); font-weight: 500;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .song-info { text-align: center; margin-bottom: 18px; }
+
+    .song-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; letter-spacing: 3px; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .song-subtitle { font-size: 12px; color: var(--muted); letter-spacing: 1px; margin-top: 3px; }
+
+    /* error state */
+    .song-subtitle.error { color: #e05555; }
+
+    input[type=range] {
+      -webkit-appearance: none; width: 100%; height: 4px;
+      border-radius: 4px; outline: none; cursor: pointer;
+      background: linear-gradient(to right, var(--gold) 0%, rgba(255,255,255,0.1) 0%);
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--gold);
+      box-shadow: 0 0 8px rgba(201,168,76,0.6);
+      transition: transform 0.2s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+    .time-row {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: var(--muted);
+      margin-top: 6px; margin-bottom: 18px;
+    }
+
+    .search-wrap { position: relative; margin-bottom: 20px; }
+
+    .search-wrap input {
+      width: 100%; padding: 10px 16px; border-radius: 50px;
+      background: var(--surface); border: 1px solid rgba(201,168,76,0.2);
+      color: var(--text); font-family: 'DM Sans', sans-serif;
+      font-size: 13px; outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .search-wrap input::placeholder { color: var(--muted); }
+    .search-wrap input:focus { border-color: var(--gold); background: rgba(201,168,76,0.05); }
+
+    .suggestions {
+      position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+      background: #0f0d0b; border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 14px; overflow: hidden; z-index: 100;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    }
+
+    .suggestion-item {
+      padding: 11px 16px; font-size: 13px; cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      transition: background 0.15s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover { background: var(--surface-hover); color: var(--gold); }
+    .suggestion-item.info { color: var(--muted); font-style: italic; pointer-events: none; }
+
+    .controls {
+      display: flex; align-items: center;
+      justify-content: center; gap: 16px; margin-bottom: 24px;
+    }
+
+    .ctrl-btn {
+      width: 48px; height: 48px; border: none; border-radius: 50%;
+      background: var(--surface); color: var(--text);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background 0.2s, transform 0.15s;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .ctrl-btn:hover { background: var(--surface-hover); }
+    .ctrl-btn:active { transform: scale(0.92); }
+    .ctrl-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
+    #play-pause-btn {
+      width: 64px; height: 64px;
+      background: var(--gold); color: #000;
+      box-shadow: 0 0 24px rgba(201,168,76,0.4);
+    }
+
+    #play-pause-btn:hover { background: #d9b85c; }
+    #play-pause-btn svg { width: 26px; height: 26px; }
+    #play-pause-btn .icon-pause { display: none; }
+    #play-pause-btn.playing .icon-play  { display: none; }
+    #play-pause-btn.playing .icon-pause { display: block; }
+
+    #loop-btn.active { color: var(--gold); background: rgba(201,168,76,0.12); }
+
+    .queue-header {
+      font-size: 11px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+    }
+
+    .queue-list {
+      max-height: 130px; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent;
+    }
+
+    .queue-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
+      transition: background 0.15s; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .queue-item:hover { background: var(--surface-hover); }
+    .queue-item-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+    .queue-remove { font-size: 16px; color: var(--muted); margin-left: 10px; cursor: pointer; flex-shrink: 0; }
+    .queue-remove:hover { color: #e05555; }
+    .queue-empty { font-size: 12px; color: var(--muted); text-align: center; padding: 12px 0; }
+  </style>
+</head>
+<body>
+<div class="player">
+  <div class="header">
+    <span class="logo-paw">🦁</span>
+    <div class="logo-leo">LEO</div>
+    <span class="logo-paw">🎵</span>
+  </div>
+
+  <div class="cover-wrap" id="cover-wrap">
+    <img src="music-cover.png" alt="Album Art" id="cover-img">
+    <div class="cover-overlay">
+      <div class="spinner"></div>
+      <div class="loading-label" id="loading-label">Fetching track…</div>
+    </div>
+  </div>
+
+  <div class="song-info">
+    <div class="song-title" id="song-title">Welcome to Leo</div>
+    <div class="song-subtitle" id="song-subtitle">Search a song to begin</div>
+  </div>
+
+  <div class="progress-wrap">
+    <input type="range" id="progress" value="0" min="0" max="100" step="0.1">
+  </div>
+  <div class="time-row">
+    <span id="time-current">0:00</span>
+    <span id="time-total">0:00</span>
+  </div>
+
+  <div class="search-wrap">
+    <input type="text" id="song-search" placeholder="Search YouTube for a song…" autocomplete="off">
+    <div id="suggestions" class="suggestions" style="display:none;"></div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" id="prev-btn" title="Previous">
+      <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button class="ctrl-btn" id="play-pause-btn" title="Play / Pause">
+      <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <button class="ctrl-btn" id="next-btn" title="Next">
+      <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zm2-8.14 5.14 2.14L8 14.14V9.86zM16 6h2v12h-2z"/></svg>
+    </button>
+    <button class="ctrl-btn" id="loop-btn" title="Loop">
+      <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+    </button>
+  </div>
+
+  <div class="queue-section">
+    <div class="queue-header">Up Next</div>
+    <div class="queue-list" id="queue-list">
+      <div class="queue-empty">Queue is empty</div>
+    </div>
+  </div>
+</div>
+
+<audio id="audio"></audio>
+
+<script>
+  const BACKEND = "https://mahir14-jabajaba.hf.space";
+
+  const audio        = document.getElementById("audio");
+  const playPauseBtn = document.getElementById("play-pause-btn");
+  const progressBar  = document.getElementById("progress");
+  const timeCurrent  = document.getElementById("time-current");
+  const timeTotal    = document.getElementById("time-total");
+  const songTitle    = document.getElementById("song-title");
+  const songSubtitle = document.getElementById("song-subtitle");
+  const coverWrap    = document.getElementById("cover-wrap");
+  const loadingLabel = document.getElementById("loading-label");
+  const searchInput  = document.getElementById("song-search");
+  const suggestionsBox = document.getElementById("suggestions");
+  const queueListEl  = document.getElementById("queue-list");
+
+  let isLooping  = false;
+  let isLoading  = false;
+  let searchTimeout = null;
+  let lastQuery  = "";
+  const queue    = [];
+
+  /* ── Utilities ── */
+  function formatTime(secs) {
+    if (!secs || isNaN(secs) || !isFinite(secs)) return "0:00";
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
+  function setLoading(state, label = "Fetching track…") {
+    isLoading = state;
+    coverWrap.classList.toggle("loading", state);
+    loadingLabel.textContent = label;
+  }
+
+  function setStatus(text, isError = false) {
+    songSubtitle.textContent = text;
+    songSubtitle.classList.toggle("error", isError);
+  }
+
+  /* ── Play a song by title ── */
+  async function playSong(title) {
+    if (isLoading) return;
+    setLoading(true, "Downloading…");
+    songTitle.textContent = title;
+    setStatus("fetching from YouTube…");
+
+    try {
+      const res = await fetch(`${BACKEND}/get-song?title=${encodeURIComponent(title)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || `Server error ${res.status}`);
+      }
+
+      // Fully reset the audio element before loading new source
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+
+      audio.src = data.file_url;
+      audio.load();
+
+      // Wait for enough data to play
+      await new Promise((resolve, reject) => {
+        const onCanPlay = () => { cleanup(); resolve(); };
+        const onError   = () => { cleanup(); reject(new Error("Audio failed to load. Format may be unsupported.")); };
+        function cleanup() {
+          audio.removeEventListener("canplay", onCanPlay);
+          audio.removeEventListener("error",   onError);
+        }
+        audio.addEventListener("canplay", onCanPlay);
+        audio.addEventListener("error",   onError);
+        // Timeout after 30s (large file on slow connection)
+        setTimeout(() => { cleanup(); reject(new Error("Timed out waiting for audio.")); }, 30000);
+      });
+
+      await audio.play();
+      setStatus("streaming via Leo");
+
+    } catch (err) {
+      console.error("Playback error:", err);
+      songTitle.textContent = "Playback failed";
+      setStatus(err.message, true);
+      playPauseBtn.classList.remove("playing");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ── Search ── */
+  searchInput.addEventListener("input", () => {
+    const q = searchInput.value.trim();
+    clearTimeout(searchTimeout);
+    if (!q) { suggestionsBox.style.display = "none"; return; }
+
+    suggestionsBox.style.display = "block";
+    suggestionsBox.innerHTML = `<div class="suggestion-item info">Searching…</div>`;
+    searchTimeout = setTimeout(() => fetchSuggestions(q), 350);
+  });
+
+  async function fetchSuggestions(q) {
+    if (q === lastQuery) return;
+    lastQuery = q;
+    try {
+      const res  = await fetch(`${BACKEND}/search?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Search failed");
+
+      if (!data.results?.length) {
+        suggestionsBox.innerHTML = `<div class="suggestion-item info">No results found</div>`;
+        return;
+      }
+
+      suggestionsBox.innerHTML = "";
+      data.results.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "suggestion-item";
+        div.textContent = item.title;
+        div.addEventListener("click", () => selectSong(item.title));
+        suggestionsBox.appendChild(div);
+      });
+    } catch (err) {
+      suggestionsBox.innerHTML = `<div class="suggestion-item info">Error: ${err.message}</div>`;
+    }
+  }
+
+  function selectSong(title) {
+    searchInput.value = "";
+    suggestionsBox.style.display = "none";
+    lastQuery = "";
+    playSong(title);
+  }
+
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".search-wrap")) suggestionsBox.style.display = "none";
+  });
+
+  /* ── Play / Pause ── */
+  playPauseBtn.addEventListener("click", () => {
+    if (isLoading || !audio.src) return;
+    audio.paused ? audio.play() : audio.pause();
+  });
+
+  audio.addEventListener("play",  () => playPauseBtn.classList.add("playing"));
+  audio.addEventListener("pause", () => playPauseBtn.classList.remove("playing"));
+
+  audio.addEventListener("error", () => {
+    if (!isLoading) {
+      setStatus("Playback error — format may be unsupported in this browser", true);
+      playPauseBtn.classList.remove("playing");
+    }
+  });
+
+  /* ── Progress ── */
+  audio.addEventListener("timeupdate", () => {
+    const pct = (audio.currentTime / audio.duration) * 100 || 0;
+    progressBar.value = pct;
+    progressBar.style.background =
+      `linear-gradient(to right, var(--gold) ${pct}%, rgba(255,255,255,0.1) ${pct}%)`;
+    timeCurrent.textContent = formatTime(audio.currentTime);
+    timeTotal.textContent   = formatTime(audio.duration);
+  });
+
+  progressBar.addEventListener("input", () => {
+    if (audio.duration) audio.currentTime = (progressBar.value / 100) * audio.duration;
+  });
+
+  /* ── Next / Prev ── */
+  document.getElementById("next-btn").addEventListener("click", () => {
+    if (queue.length > 0) { const next = queue.shift(); updateQueueDisplay(); playSong(next); }
+  });
+
+  document.getElementById("prev-btn").addEventListener("click", () => {
+    if (audio.currentTime > 5) audio.currentTime = 0;
+  });
+
+  audio.addEventListener("ended", () => {
+    if (queue.length > 0) { const next = queue.shift(); updateQueueDisplay(); playSong(next); }
+  });
+
+  /* ── Loop ── */
+  document.getElementById("loop-btn").addEventListener("click", function() {
+    isLooping = !isLooping;
+    this.classList.toggle("active", isLooping);
+    audio.loop = isLooping;
+  });
+
+  /* ── Queue ── */
+  function updateQueueDisplay() {
+    queueListEl.innerHTML = "";
+    if (!queue.length) {
+      queueListEl.innerHTML = `<div class="queue-empty">Queue is empty</div>`;
+      return;
+    }
+    queue.forEach((title, idx) => {
+      const item = document.createElement("div");
+      item.className = "queue-item";
+      item.innerHTML = `<span class="queue-item-title">${title}</span>
+                        <span class="queue-remove" title="Remove">✕</span>`;
+      item.querySelector(".queue-remove").addEventListener("click", e => {
+        e.stopPropagation(); queue.splice(idx, 1); updateQueueDisplay();
+      });
+      item.addEventListener("click", () => { queue.splice(idx, 1); updateQueueDisplay(); playSong(title); });
+      queueListEl.appendChild(item);
+    });
+  }
+</script>
+</body>
+</html>
